@@ -195,7 +195,7 @@
             <h1 id="title">お年玉キャッチ</h1>
             <p id="desc">
                 上から降ってくる小銭とお札を、下のポチ袋で左右に集めるゲームです。<br />操作：←→
-                / A・D / 指でドラッグ。制限時間ありです♡
+                / A・D / 指でドラッグ。
             </p>
             <div id="row">
                 <select id="limitSel" title="制限時間">
@@ -211,9 +211,6 @@
                     <input id="sfx" type="checkbox" checked />
                     効果音
                 </label>
-            </div>
-            <div id="tiny">
-                ※録画は入れていません。Xに出すなら、画面収録で30秒の「結果」まで見せるのが強いです。
             </div>
         </div>
     </div>
@@ -532,7 +529,7 @@
                 setTimeout(() => {
                     const newBestText = isNewBest ? '<span style="color:#FFD700;text-shadow:0 0 10px #FFD700">🎉 NEW BEST!</span><br>' : '';
                     titleEl.innerHTML = isNewBest ? '🏆 新記録達成！ 🏆' : '✨ タイムアップ！ ✨';
-                    descEl.innerHTML = `${newBestText}結果：<b style="font-size:1.3em;color:#FFD700">${score.toLocaleString()}円</b><br>ベスト：<b>${best.toLocaleString()}円</b><br><br>もう一回いきます？♡`;
+                    descEl.innerHTML = `${newBestText}結果：<b style="font-size:1.3em;color:#FFD700">${score.toLocaleString()}円</b><br>ベスト：<b>${best.toLocaleString()}円</b><br><br>もう一回チャレンジ？`;
                     startBtn.style.display = "none";
                     retryBtn.style.display = "";
                     centerUI.style.display = "grid";
