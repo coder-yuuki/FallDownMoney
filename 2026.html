@@ -140,6 +140,68 @@
             margin-top: 10px;
         }
 
+        /* コンボ表示 */
+        #comboDisplay {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 12;
+            pointer-events: none;
+            text-align: right;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        #comboDisplay.active {
+            opacity: 1;
+        }
+
+        #comboCount {
+            font-size: 64px;
+            font-weight: 900;
+            color: #FFD700;
+            text-shadow:
+                0 0 20px rgba(255, 215, 0, 0.8),
+                0 0 40px rgba(255, 165, 0, 0.6),
+                0 2px 0 rgba(0, 0, 0, 0.5);
+            line-height: 1;
+        }
+
+        #comboLabel {
+            font-size: 18px;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+            letter-spacing: 2px;
+        }
+
+        #comboBonus {
+            font-size: 16px;
+            font-weight: 700;
+            color: #4ECDC4;
+            text-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+            margin-top: 4px;
+        }
+
+        @keyframes comboPop {
+            0% {
+                transform: translateY(-50%) scale(1);
+            }
+
+            50% {
+                transform: translateY(-50%) scale(1.3);
+            }
+
+            100% {
+                transform: translateY(-50%) scale(1);
+            }
+        }
+
+        #comboDisplay.pop {
+            animation: comboPop 0.15s ease-out;
+        }
+
         @keyframes panelAppear {
             0% {
                 transform: scale(0.8) translateY(30px);
@@ -249,6 +311,12 @@
         <div class="pill" id="bestPill">ベスト：0円</div>
     </div>
 
+    <div id="comboDisplay">
+        <div id="comboCount">0</div>
+        <div id="comboLabel">COMBO</div>
+        <div id="comboBonus">x1.0</div>
+    </div>
+
     <div id="centerUI">
         <div id="panel">
             <h1 id="title">お年玉キャッチ</h1>
@@ -285,6 +353,9 @@
             const bestPill = document.getElementById("bestPill");
             const timerBarContainer = document.getElementById("timerBarContainer");
             const timerBar = document.getElementById("timerBar");
+            const comboDisplay = document.getElementById("comboDisplay");
+            const comboCountEl = document.getElementById("comboCount");
+            const comboBonusEl = document.getElementById("comboBonus");
 
             const startBtn = document.getElementById("startBtn");
             const retryBtn = document.getElementById("retryBtn");
@@ -329,6 +400,17 @@
             // ヒットストップ
             let hitStopTime = 0;
             let timeScale = 1;
+
+            // 画面振動
+            let shakeIntensity = 0;
+            let shakeX = 0;
+            let shakeY = 0;
+
+            // コンボシステム
+            let combo = 0;
+            let comboTimer = 0;
+            const comboTimeout = 1.2; // コンボが途切れるまでの時間
+            let maxCombo = 0;
 
             // リザルト演出
             let resultAnimTime = 0;
@@ -385,6 +467,73 @@
                 // 金額が大きいほど長いヒットストップ
                 const duration = value >= 10000 ? 0.12 : value >= 1000 ? 0.08 : 0.04;
                 hitStopTime = Math.max(hitStopTime, duration);
+            }
+
+            // 画面振動発動
+            function triggerShake(value) {
+                // 金額に応じた振動強度
+                const intensity = value >= 10000 ? 20 : value >= 5000 ? 15 : value >= 1000 ? 10 : value >= 100 ? 5 : 3;
+                shakeIntensity = Math.max(shakeIntensity, intensity);
+            }
+
+            // コンボ追加
+            function addCombo() {
+                combo++;
+                comboTimer = comboTimeout;
+                maxCombo = Math.max(maxCombo, combo);
+
+                // コンボ表示更新
+                comboCountEl.textContent = combo;
+                comboDisplay.classList.add('active');
+
+                // ボーナス倍率表示
+                const multiplier = getComboMultiplier();
+                comboBonusEl.textContent = `x${multiplier.toFixed(1)}`;
+
+                // コンボ数に応じた色変更
+                if (combo >= 50) {
+                    comboCountEl.style.color = '#FF6B6B';
+                    comboCountEl.style.textShadow = '0 0 30px rgba(255,107,107,0.9), 0 0 60px rgba(255,0,0,0.6)';
+                } else if (combo >= 30) {
+                    comboCountEl.style.color = '#FF9F43';
+                    comboCountEl.style.textShadow = '0 0 25px rgba(255,159,67,0.8), 0 0 50px rgba(255,165,0,0.6)';
+                } else if (combo >= 15) {
+                    comboCountEl.style.color = '#4ECDC4';
+                    comboCountEl.style.textShadow = '0 0 20px rgba(78,205,196,0.8), 0 0 40px rgba(78,205,196,0.5)';
+                } else if (combo >= 5) {
+                    comboCountEl.style.color = '#45B7D1';
+                    comboCountEl.style.textShadow = '0 0 15px rgba(69,183,209,0.7), 0 0 30px rgba(69,183,209,0.4)';
+                } else {
+                    comboCountEl.style.color = '#FFD700';
+                    comboCountEl.style.textShadow = '0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,165,0,0.6)';
+                }
+
+                // ポップアニメーション
+                comboDisplay.classList.remove('pop');
+                void comboDisplay.offsetWidth; // reflow
+                comboDisplay.classList.add('pop');
+
+                // コンボ音（音階が上がる）
+                const baseFreq = 400;
+                const freqBonus = Math.min(combo * 20, 600);
+                beep(baseFreq + freqBonus, 0.04, 0.03);
+            }
+
+            // コンボ倍率取得
+            function getComboMultiplier() {
+                if (combo >= 50) return 3.0;
+                if (combo >= 30) return 2.5;
+                if (combo >= 20) return 2.0;
+                if (combo >= 10) return 1.5;
+                if (combo >= 5) return 1.2;
+                return 1.0;
+            }
+
+            // コンボリセット
+            function resetCombo() {
+                combo = 0;
+                comboTimer = 0;
+                comboDisplay.classList.remove('active');
             }
 
             // スポーン制御
@@ -555,6 +704,13 @@
                 isNewBest = false;
                 hitStopTime = 0;
                 timeScale = 1;
+                shakeIntensity = 0;
+                shakeX = 0;
+                shakeY = 0;
+                combo = 0;
+                comboTimer = 0;
+                maxCombo = 0;
+                resetCombo();
                 timeLeft = timeLimit;
                 t = 0;
                 spawnAcc = 0;
@@ -591,8 +747,9 @@
                 // パネルは少し遅延させてドラマチックに
                 setTimeout(() => {
                     const newBestText = isNewBest ? '<span style="color:#FFD700;text-shadow:0 0 10px #FFD700">🎉 NEW BEST!</span><br>' : '';
+                    const comboText = maxCombo >= 5 ? `<br>最大コンボ：<b style="color:#4ECDC4">${maxCombo}</b>` : '';
                     titleEl.innerHTML = isNewBest ? '🏆 新記録達成！ 🏆' : '✨ タイムアップ！ ✨';
-                    descEl.innerHTML = `${newBestText}結果：<b style="font-size:1.3em;color:#FFD700">${score.toLocaleString()}円</b><br>ベスト：<b>${best.toLocaleString()}円</b>`;
+                    descEl.innerHTML = `${newBestText}結果：<b style="font-size:1.3em;color:#FFD700">${score.toLocaleString()}円</b><br>ベスト：<b>${best.toLocaleString()}円</b>${comboText}`;
                     startBtn.style.display = "none";
                     retryBtn.style.display = "";
                     shareBtn.style.display = "";
@@ -993,6 +1150,14 @@
                     if (chance(0.25)) spawnMoney(); // たまにドサッと
                 }
 
+                // コンボタイマー更新
+                if (comboTimer > 0) {
+                    comboTimer -= dt;
+                    if (comboTimer <= 0) {
+                        resetCombo();
+                    }
+                }
+
                 // 入力で移動
                 let dir = 0;
                 if (keys.left) dir -= 1;
@@ -1043,10 +1208,15 @@
                             ph * 0.55,
                         );
                         if (hit) {
-                            score += m.value;
-                            addFloatText(m.x, m.y - 10, `+${m.value}円`, m.value);
+                            addCombo();
+                            const multiplier = getComboMultiplier();
+                            const bonusValue = Math.floor(m.value * multiplier);
+                            score += bonusValue;
+                            const bonusText = multiplier > 1 ? ` (x${multiplier.toFixed(1)})` : '';
+                            addFloatText(m.x, m.y - 10, `+${bonusValue}円${bonusText}`, m.value);
                             spawnParticles(m.x, m.y, m.value);
                             triggerHitStop(m.value);
+                            triggerShake(m.value);
                             beep(720 + Math.min(600, m.value), 0.05, 0.05);
                             monies.splice(i, 1);
                             continue;
@@ -1069,15 +1239,20 @@
                             ph * 0.6,
                         );
                         if (hit) {
-                            score += m.value;
+                            addCombo();
+                            const multiplier = getComboMultiplier();
+                            const bonusValue = Math.floor(m.value * multiplier);
+                            score += bonusValue;
+                            const bonusText = multiplier > 1 ? ` (x${multiplier.toFixed(1)})` : '';
                             addFloatText(
                                 m.x,
                                 m.y - 10,
-                                `+${m.value.toLocaleString()}円`,
+                                `+${bonusValue.toLocaleString()}円${bonusText}`,
                                 m.value
                             );
                             spawnParticles(m.x, m.y, m.value);
                             triggerHitStop(m.value);
+                            triggerShake(m.value);
                             beep(
                                 m.value === 10000
                                     ? 980
@@ -1098,6 +1273,22 @@
             }
 
             function render(dt) {
+                // 画面振動更新
+                if (shakeIntensity > 0) {
+                    shakeX = (Math.random() - 0.5) * shakeIntensity * 2;
+                    shakeY = (Math.random() - 0.5) * shakeIntensity * 2;
+                    shakeIntensity *= 0.85; // 減衰
+                    if (shakeIntensity < 0.5) {
+                        shakeIntensity = 0;
+                        shakeX = 0;
+                        shakeY = 0;
+                    }
+                }
+
+                // 画面振動を適用
+                ctx.save();
+                ctx.translate(shakeX, shakeY);
+
                 drawBackground();
 
                 // 紙吹雪（背景側）
@@ -1146,6 +1337,9 @@
                 }
 
                 // ヒットストップ中は白フラッシュなし（スローモーションのみ）
+
+                // 画面振動を解除
+                ctx.restore();
             }
 
             function loop(ts) {
