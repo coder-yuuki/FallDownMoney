@@ -308,6 +308,7 @@
             text-decoration: none;
             color: inherit;
             transition: all 0.2s ease;
+            cursor: pointer;
         }
 
         #appBanner:hover {
@@ -401,7 +402,7 @@
                     効果音
                 </label>
             </div>
-            <a id="appBanner" href="https://apps.apple.com/app/id6504379935" target="_blank" rel="noopener">
+            <div id="appBanner" role="button" tabindex="0">
                 <div class="banner-content">
                     <img class="app-icon" src="nyanvoice_icon.png" alt="にゃんボイス">
                     <div class="app-info">
@@ -410,7 +411,7 @@
                     </div>
                     <span class="app-badge">App Store</span>
                 </div>
-            </a>
+            </div>
         </div>
     </div>
 
@@ -1529,6 +1530,13 @@
                 // Xのポスト画面を開く
                 const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
                 window.open(tweetUrl, '_blank');
+            });
+
+            // アプリバナークリック処理
+            appBanner.addEventListener("click", () => {
+                if (confirm("App Storeを開きますか？\n\n「にゃんボイス」のページに移動します。")) {
+                    window.open("https://apps.apple.com/jp/app/%E3%81%AB%E3%82%83%E3%82%93%E3%83%9C%E3%82%A4%E3%82%B9-nearvoice/id6748361244", "_blank", "noopener");
+                }
             });
 
             // 初期化
