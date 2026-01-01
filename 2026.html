@@ -1071,14 +1071,7 @@
                     ctx.restore();
                 }
 
-                // ヒットストップ中のエフェクト（画面が白くフラッシュ）
-                if (hitStopTime > 0) {
-                    ctx.save();
-                    ctx.globalAlpha = 0.15;
-                    ctx.fillStyle = '#FFF';
-                    ctx.fillRect(0, 0, W, H);
-                    ctx.restore();
-                }
+                // ヒットストップ中は白フラッシュなし（スローモーションのみ）
             }
 
             function loop(ts) {
