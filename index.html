@@ -83,6 +83,7 @@
         #panel h1 {
             margin: 0 0 8px 0;
             font-size: 20px;
+            text-align: center;
         }
 
         #panel p {
@@ -92,11 +93,91 @@
             font-weight: 600;
         }
 
+        /* リザルト画面用スタイル */
+        #resultSection {
+            display: none;
+            text-align: center;
+        }
+
+        #resultScore {
+            font-size: 42px;
+            font-weight: 900;
+            color: #FFD700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+            margin: 8px 0;
+            letter-spacing: -1px;
+        }
+
+        #resultStats {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin: 12px 0;
+            padding: 10px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .stat-value.highlight {
+            color: #4ECDC4;
+        }
+
+        #resultMessage {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.75);
+            margin: 12px 0 16px 0;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        #newBestBadge {
+            display: none;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #1a1a1a;
+            font-size: 12px;
+            font-weight: 800;
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 8px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
         #row {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
             align-items: center;
+            justify-content: center;
         }
 
         button,
@@ -385,6 +466,21 @@
                 上から降ってくる小銭とお札を、下のポチ袋で左右に集めるゲームです。<br />操作：←→
                 / A・D / 指でドラッグ。
             </p>
+            <div id="resultSection">
+                <span id="newBestBadge">🏆 NEW BEST!</span>
+                <div id="resultScore">0円</div>
+                <div id="resultStats">
+                    <div class="stat-item">
+                        <div class="stat-label">ベスト</div>
+                        <div class="stat-value" id="resultBest">0円</div>
+                    </div>
+                    <div class="stat-item" id="comboStatItem" style="display:none">
+                        <div class="stat-label">最大コンボ</div>
+                        <div class="stat-value highlight" id="resultCombo">0</div>
+                    </div>
+                </div>
+                <div id="resultMessage"></div>
+            </div>
             <div id="row">
                 <button id="startBtn">スタート</button>
                 <button id="retryBtn" style="display: none">
@@ -437,6 +533,15 @@
             const descEl = document.getElementById("desc");
             const panel = document.getElementById("panel");
             const centerUI = document.getElementById("centerUI");
+
+            // リザルト画面要素
+            const resultSection = document.getElementById("resultSection");
+            const resultScoreEl = document.getElementById("resultScore");
+            const resultBestEl = document.getElementById("resultBest");
+            const resultComboEl = document.getElementById("resultCombo");
+            const comboStatItem = document.getElementById("comboStatItem");
+            const resultMessageEl = document.getElementById("resultMessage");
+            const newBestBadge = document.getElementById("newBestBadge");
 
             const TAU = Math.PI * 2;
 
@@ -818,9 +923,6 @@
 
                 // パネルは少し遅延させてドラマチックに
                 setTimeout(() => {
-                    const newBestText = isNewBest ? '<span style="color:#FFD700;text-shadow:0 0 10px #FFD700">🎉 NEW BEST!</span><br>' : '';
-                    const comboText = maxCombo >= 5 ? `<br>最大コンボ：<b style="color:#4ECDC4">${maxCombo}</b>` : '';
-
                     // 金額に応じた励ましメッセージ
                     let wishMessage = '';
                     if (score >= 100000) {
@@ -836,10 +938,33 @@
                     } else {
                         wishMessage = '💪 まだまだこれから！';
                     }
-                    const wishText = `<br><span style="font-size:0.9em;color:rgba(255,255,255,0.8);margin-top:4px;display:inline-block">${wishMessage}</span>`;
 
-                    titleEl.innerHTML = isNewBest ? '🏆 新記録達成！ 🏆' : '✨ タイムアップ！ ✨';
-                    descEl.innerHTML = `${newBestText}結果：<b style="font-size:1.3em;color:#FFD700">${score.toLocaleString()}円</b><br>ベスト：<b>${best.toLocaleString()}円</b>${comboText}${wishText}`;
+                    // タイトル更新
+                    titleEl.innerHTML = isNewBest ? '🏆 新記録達成！' : '✨ タイムアップ！';
+
+                    // 説明文を非表示、リザルトセクションを表示
+                    descEl.style.display = "none";
+                    resultSection.style.display = "block";
+
+                    // NEW BESTバッジ
+                    newBestBadge.style.display = isNewBest ? "inline-block" : "none";
+
+                    // スコア表示
+                    resultScoreEl.textContent = `${score.toLocaleString()}円`;
+                    resultBestEl.textContent = `${best.toLocaleString()}円`;
+
+                    // コンボ表示（5以上のみ）
+                    if (maxCombo >= 5) {
+                        comboStatItem.style.display = "block";
+                        resultComboEl.textContent = maxCombo;
+                    } else {
+                        comboStatItem.style.display = "none";
+                    }
+
+                    // 励ましメッセージ
+                    resultMessageEl.textContent = wishMessage;
+
+                    // ボタン表示
                     startBtn.style.display = "none";
                     retryBtn.style.display = "";
                     shareBtn.style.display = "";
@@ -1470,6 +1595,8 @@
                         startBtn.style.display = "";
                         retryBtn.style.display = "none";
                         appBanner.style.display = "none";
+                        resultSection.style.display = "none";
+                        descEl.style.display = "";
                         startGame();
                     }
                 }
@@ -1519,6 +1646,8 @@
                 retryBtn.style.display = "none";
                 shareBtn.style.display = "none";
                 appBanner.style.display = "none";
+                resultSection.style.display = "none";
+                descEl.style.display = "";
                 startGame();
             });
 
