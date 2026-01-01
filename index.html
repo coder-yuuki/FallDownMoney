@@ -296,6 +296,66 @@
             height: 16px;
             fill: currentColor;
         }
+
+        /* アプリ広告バナー */
+        #appBanner {
+            display: none;
+            margin-top: 16px;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 12px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s ease;
+        }
+
+        #appBanner:hover {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(236, 72, 153, 0.25) 100%);
+            border-color: rgba(139, 92, 246, 0.5);
+            transform: translateY(-2px);
+        }
+
+        #appBanner .banner-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #appBanner .app-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        #appBanner .app-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        #appBanner .app-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.95);
+            margin-bottom: 2px;
+        }
+
+        #appBanner .app-desc {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.3;
+        }
+
+        #appBanner .app-badge {
+            font-size: 10px;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            color: rgba(255, 255, 255, 0.9);
+            white-space: nowrap;
+        }
     </style>
 </head>
 
@@ -341,6 +401,16 @@
                     効果音
                 </label>
             </div>
+            <a id="appBanner" href="https://apps.apple.com/app/id6504379935" target="_blank" rel="noopener">
+                <div class="banner-content">
+                    <img class="app-icon" src="nyanvoice_icon.png" alt="にゃんボイス">
+                    <div class="app-info">
+                        <div class="app-name">🐱 にゃんボイス</div>
+                        <div class="app-desc">購入したASMR・ボイス作品を<br>管理・再生しやすくするアプリ</div>
+                    </div>
+                    <span class="app-badge">App Store</span>
+                </div>
+            </a>
         </div>
     </div>
 
@@ -360,6 +430,7 @@
             const startBtn = document.getElementById("startBtn");
             const retryBtn = document.getElementById("retryBtn");
             const shareBtn = document.getElementById("shareBtn");
+            const appBanner = document.getElementById("appBanner");
             const sfxToggle = document.getElementById("sfx");
             const titleEl = document.getElementById("title");
             const descEl = document.getElementById("desc");
@@ -748,7 +819,7 @@
                 setTimeout(() => {
                     const newBestText = isNewBest ? '<span style="color:#FFD700;text-shadow:0 0 10px #FFD700">🎉 NEW BEST!</span><br>' : '';
                     const comboText = maxCombo >= 5 ? `<br>最大コンボ：<b style="color:#4ECDC4">${maxCombo}</b>` : '';
-                    
+
                     // 金額に応じた励ましメッセージ
                     let wishMessage = '';
                     if (score >= 100000) {
@@ -765,12 +836,13 @@
                         wishMessage = '💪 まだまだこれから！';
                     }
                     const wishText = `<br><span style="font-size:0.9em;color:rgba(255,255,255,0.8);margin-top:4px;display:inline-block">${wishMessage}</span>`;
-                    
+
                     titleEl.innerHTML = isNewBest ? '🏆 新記録達成！ 🏆' : '✨ タイムアップ！ ✨';
                     descEl.innerHTML = `${newBestText}結果：<b style="font-size:1.3em;color:#FFD700">${score.toLocaleString()}円</b><br>ベスト：<b>${best.toLocaleString()}円</b>${comboText}${wishText}`;
                     startBtn.style.display = "none";
                     retryBtn.style.display = "";
                     shareBtn.style.display = "";
+                    appBanner.style.display = "block";
                     centerUI.style.display = "grid";
                     panel.style.animation = "panelAppear 0.5s ease-out";
                 }, 800);
@@ -1396,6 +1468,7 @@
                     else if (state === "ended") {
                         startBtn.style.display = "";
                         retryBtn.style.display = "none";
+                        appBanner.style.display = "none";
                         startGame();
                     }
                 }
@@ -1444,6 +1517,7 @@
                 startBtn.style.display = "";
                 retryBtn.style.display = "none";
                 shareBtn.style.display = "none";
+                appBanner.style.display = "none";
                 startGame();
             });
 
