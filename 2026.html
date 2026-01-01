@@ -1,0 +1,1190 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+    <title>お年玉キャッチ</title>
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            background: #07050a;
+            overflow: hidden;
+            font-family:
+                system-ui,
+                -apple-system,
+                Segoe UI,
+                Roboto,
+                "Noto Sans JP",
+                "Hiragino Kaku Gothic ProN",
+                sans-serif;
+        }
+
+        #wrap {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+        }
+
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+
+        #hud {
+            position: fixed;
+            left: 12px;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: flex-start;
+            color: rgba(255, 255, 255, 0.92);
+            z-index: 10;
+            pointer-events: none;
+            text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+            font-weight: 700;
+        }
+
+        .pill {
+            pointer-events: none;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 12px;
+            padding: 8px 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        #centerUI {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        #panel {
+            pointer-events: auto;
+            width: min(92vw, 420px);
+            background: rgba(10, 8, 14, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 16px;
+            padding: 16px 14px;
+            color: rgba(255, 255, 255, 0.94);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(12px);
+        }
+
+        #panel h1 {
+            margin: 0 0 8px 0;
+            font-size: 20px;
+        }
+
+        #panel p {
+            margin: 6px 0 12px 0;
+            line-height: 1.45;
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 600;
+        }
+
+        #row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button,
+        select,
+        label {
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 10px 12px;
+            font-weight: 800;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        select {
+            cursor: pointer;
+        }
+
+        label {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        #tiny {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 700;
+            margin-top: 10px;
+        }
+
+        @keyframes panelAppear {
+            0% {
+                transform: scale(0.8) translateY(30px);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.03) translateY(-5px);
+            }
+
+            100% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 25px rgba(255, 215, 0, 0.9), 0 0 40px rgba(255, 165, 0, 0.5);
+            }
+        }
+
+        #retryBtn {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #1a1a1a;
+            animation: glow 1.5s ease-in-out infinite;
+            border: none;
+        }
+
+        #retryBtn:hover {
+            background: linear-gradient(135deg, #FFEC8B 0%, #FFD700 100%);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="wrap"><canvas id="c"></canvas></div>
+
+    <div id="hud">
+        <div class="pill" id="scorePill">所持金：0円</div>
+        <div class="pill" id="timePill">残り：30.0秒</div>
+        <div class="pill" id="bestPill">ベスト：0円</div>
+    </div>
+
+    <div id="centerUI">
+        <div id="panel">
+            <h1 id="title">お年玉キャッチ</h1>
+            <p id="desc">
+                上から降ってくる小銭とお札を、下のポチ袋で左右に集めるゲームです。<br />操作：←→
+                / A・D / 指でドラッグ。制限時間ありです♡
+            </p>
+            <div id="row">
+                <select id="limitSel" title="制限時間">
+                    <option value="20">20秒</option>
+                    <option value="30" selected>30秒</option>
+                    <option value="45">45秒</option>
+                </select>
+                <button id="startBtn">スタート</button>
+                <button id="retryBtn" style="display: none">
+                    もう一回
+                </button>
+                <label title="効果音">
+                    <input id="sfx" type="checkbox" checked />
+                    効果音
+                </label>
+            </div>
+            <div id="tiny">
+                ※録画は入れていません。Xに出すなら、画面収録で30秒の「結果」まで見せるのが強いです。
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            const canvas = document.getElementById("c");
+            const ctx = canvas.getContext("2d", { alpha: false });
+
+            const scorePill = document.getElementById("scorePill");
+            const timePill = document.getElementById("timePill");
+            const bestPill = document.getElementById("bestPill");
+
+            const limitSel = document.getElementById("limitSel");
+            const startBtn = document.getElementById("startBtn");
+            const retryBtn = document.getElementById("retryBtn");
+            const sfxToggle = document.getElementById("sfx");
+            const titleEl = document.getElementById("title");
+            const descEl = document.getElementById("desc");
+            const panel = document.getElementById("panel");
+            const centerUI = document.getElementById("centerUI");
+
+            const TAU = Math.PI * 2;
+
+            let W = 0,
+                H = 0,
+                DPR = 1;
+
+            // ゲーム状態
+            let state = "title"; // title | playing | ended
+            let timeLimit = 30;
+            let timeLeft = 30;
+            let score = 0;
+            let best = 0;
+
+            // プレイヤー（ポチ袋）
+            const player = {
+                x: 0,
+                y: 0,
+                w: 140,
+                h: 90,
+                vx: 0,
+                speed: 900,
+                targetX: null,
+            };
+
+            // お金
+            const monies = [];
+            const floatTexts = [];
+
+            // パーティクルシステム
+            const particles = [];
+
+            // ヒットストップ
+            let hitStopTime = 0;
+            let timeScale = 1;
+
+            // リザルト演出
+            let resultAnimTime = 0;
+            const confetti = [];
+            let displayedScore = 0;
+            let isNewBest = false;
+
+            // パーティクル生成
+            function spawnParticles(x, y, value) {
+                const count = value >= 1000 ? 20 : value >= 100 ? 12 : 8;
+                const colors = value >= 1000
+                    ? ['#FFD700', '#FFA500', '#FFFF00', '#FF6B6B', '#4ECDC4']
+                    : ['#FFD700', '#FFC107', '#FFEB3B'];
+
+                for (let i = 0; i < count; i++) {
+                    const angle = (TAU / count) * i + Math.random() * 0.5;
+                    const speed = 150 + Math.random() * 200 + (value >= 1000 ? 100 : 0);
+                    particles.push({
+                        x,
+                        y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed - 100,
+                        life: 0.6 + Math.random() * 0.4,
+                        maxLife: 0.6 + Math.random() * 0.4,
+                        size: value >= 1000 ? 4 + Math.random() * 4 : 2 + Math.random() * 3,
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        sparkle: Math.random() * TAU,
+                        type: value >= 1000 ? 'star' : 'circle'
+                    });
+                }
+            }
+
+            // 紙吹雪生成（リザルト用）
+            function spawnConfetti() {
+                const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+                for (let i = 0; i < 80; i++) {
+                    confetti.push({
+                        x: Math.random() * W,
+                        y: -20 - Math.random() * 100,
+                        vx: (Math.random() - 0.5) * 100,
+                        vy: 150 + Math.random() * 200,
+                        rot: Math.random() * TAU,
+                        rotV: (Math.random() - 0.5) * 8,
+                        size: 8 + Math.random() * 8,
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        type: Math.random() > 0.5 ? 'rect' : 'circle',
+                        life: 4 + Math.random() * 2
+                    });
+                }
+            }
+
+            // ヒットストップ発動
+            function triggerHitStop(value) {
+                // 金額が大きいほど長いヒットストップ
+                const duration = value >= 10000 ? 0.12 : value >= 1000 ? 0.08 : 0.04;
+                hitStopTime = Math.max(hitStopTime, duration);
+            }
+
+            // スポーン制御
+            let spawnAcc = 0;
+            let t = 0; // 経過時間
+            let lastTs = performance.now();
+
+            // 入力
+            const keys = { left: false, right: false };
+
+            // サウンド（簡易）
+            let audioCtx = null;
+            function beep(freq = 520, dur = 0.06, gain = 0.06) {
+                if (!sfxToggle.checked) return;
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext ||
+                        window.webkitAudioContext)();
+                }
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.type = "triangle";
+                o.frequency.value = freq;
+                g.gain.value = 0;
+                o.connect(g);
+                g.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+                g.gain.setValueAtTime(0, now);
+                g.gain.linearRampToValueAtTime(gain, now + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+                o.start(now);
+                o.stop(now + dur + 0.02);
+            }
+
+            function resize() {
+                DPR = Math.max(1, Math.min(2, devicePixelRatio || 1));
+                const rect = canvas.getBoundingClientRect();
+                // フル画面
+                W = Math.floor(innerWidth);
+                H = Math.floor(innerHeight);
+                canvas.style.width = W + "px";
+                canvas.style.height = H + "px";
+                canvas.width = Math.floor(W * DPR);
+                canvas.height = Math.floor(H * DPR);
+                ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+                // サイズに合わせてポチ袋調整
+                player.w = Math.max(110, Math.min(180, W * 0.18));
+                player.h = player.w * 0.62;
+                player.y = H - Math.max(110, H * 0.14);
+                if (state !== "playing") {
+                    player.x = W * 0.5;
+                } else {
+                    player.x = clamp(
+                        player.x,
+                        player.w * 0.5,
+                        W - player.w * 0.5,
+                    );
+                }
+            }
+
+            function clamp(v, a, b) {
+                return Math.max(a, Math.min(b, v));
+            }
+            function rand(a, b) {
+                return a + Math.random() * (b - a);
+            }
+            function chance(p) {
+                return Math.random() < p;
+            }
+
+            function moneyDef() {
+                // coins: 10/50/100/500, bills: 1000/5000/10000
+                const isBill = chance(0.32);
+                if (!isBill) {
+                    const arr = [10, 50, 100, 500];
+                    const value =
+                        arr[Math.floor(Math.random() * arr.length)];
+                    return {
+                        kind: "coin",
+                        value,
+                        r:
+                            value === 10
+                                ? 12
+                                : value === 50
+                                    ? 14
+                                    : value === 100
+                                        ? 16
+                                        : 18,
+                        hue: value === 500 ? 45 : 50,
+                    };
+                } else {
+                    const roll = Math.random();
+                    const value =
+                        roll < 0.7 ? 1000 : roll < 0.95 ? 5000 : 10000;
+                    const w =
+                        value === 10000 ? 110 : value === 5000 ? 104 : 96;
+                    const h = w * 0.52;
+                    return { kind: "bill", value, w, h };
+                }
+            }
+
+            function spawnMoney() {
+                const d = moneyDef();
+                const x = rand(30, W - 30);
+                const y = -80;
+                const base = 260 + 240 * (t / timeLimit); // だんだん速く
+                const vy = rand(base, base + 260);
+                const drift = rand(-70, 70);
+
+                if (d.kind === "coin") {
+                    monies.push({
+                        kind: "coin",
+                        x,
+                        y,
+                        vx: drift,
+                        vy,
+                        r: d.r,
+                        value: d.value,
+                        spin: rand(-5, 5),
+                        a: rand(0, TAU),
+                        wob: rand(10, 22),
+                    });
+                } else {
+                    monies.push({
+                        kind: "bill",
+                        x,
+                        y,
+                        vx: drift * 0.7,
+                        vy,
+                        w: d.w,
+                        h: d.h,
+                        value: d.value,
+                        rot: rand(-0.35, 0.35),
+                        rotV: rand(-1.2, 1.2),
+                        sheen: rand(0, TAU),
+                    });
+                }
+            }
+
+            function rectHit(ax, ay, aw, ah, bx, by, bw, bh) {
+                return (
+                    Math.abs(ax - bx) * 2 < aw + bw &&
+                    Math.abs(ay - by) * 2 < ah + bh
+                );
+            }
+
+            function addFloatText(x, y, text, value) {
+                const isBig = value >= 1000;
+                floatTexts.push({
+                    x, y, text,
+                    life: isBig ? 1.2 : 0.9,
+                    vy: isBig ? -60 : -40,
+                    scale: isBig ? 1.5 : 1,
+                    glow: isBig
+                });
+            }
+
+            function resetGame() {
+                monies.length = 0;
+                floatTexts.length = 0;
+                particles.length = 0;
+                confetti.length = 0;
+                score = 0;
+                displayedScore = 0;
+                resultAnimTime = 0;
+                isNewBest = false;
+                hitStopTime = 0;
+                timeScale = 1;
+                timeLimit = parseInt(limitSel.value, 10);
+                timeLeft = timeLimit;
+                t = 0;
+                spawnAcc = 0;
+                player.x = W * 0.5;
+                player.vx = 0;
+                player.targetX = null;
+                lastTs = performance.now();
+                updateHUD();
+            }
+
+            function startGame() {
+                resetGame();
+                state = "playing";
+                centerUI.style.display = "none";
+                beep(660, 0.07, 0.06);
+            }
+
+            function endGame() {
+                state = "ended";
+                isNewBest = score > best;
+                best = Math.max(best, score);
+                localStorage.setItem("otoshidama_best", String(best));
+                updateHUD();
+
+                // リザルト演出開始
+                resultAnimTime = 0;
+                displayedScore = 0;
+                spawnConfetti();
+                setTimeout(() => spawnConfetti(), 300);
+                setTimeout(() => spawnConfetti(), 600);
+
+                // パネルは少し遅延させてドラマチックに
+                setTimeout(() => {
+                    const newBestText = isNewBest ? '<span style="color:#FFD700;text-shadow:0 0 10px #FFD700">🎉 NEW BEST!</span><br>' : '';
+                    titleEl.innerHTML = isNewBest ? '🏆 新記録達成！ 🏆' : '✨ タイムアップ！ ✨';
+                    descEl.innerHTML = `${newBestText}結果：<b style="font-size:1.3em;color:#FFD700">${score.toLocaleString()}円</b><br>ベスト：<b>${best.toLocaleString()}円</b><br><br>もう一回いきます？♡`;
+                    startBtn.style.display = "none";
+                    retryBtn.style.display = "";
+                    centerUI.style.display = "grid";
+                    panel.style.animation = "panelAppear 0.5s ease-out";
+                }, 800);
+
+                // ファンファーレ音
+                beep(523, 0.15, 0.08); // C
+                setTimeout(() => beep(659, 0.15, 0.08), 100); // E
+                setTimeout(() => beep(784, 0.15, 0.08), 200); // G
+                setTimeout(() => beep(1047, 0.25, 0.1), 350); // High C
+            }
+
+            function updateHUD() {
+                scorePill.textContent = `所持金：${score.toLocaleString()}円`;
+                timePill.textContent = `残り：${Math.max(0, timeLeft).toFixed(1)}秒`;
+                bestPill.textContent = `ベスト：${best.toLocaleString()}円`;
+            }
+
+            function drawBackground() {
+                // 夜からほんのり赤いグラデ
+                const g = ctx.createLinearGradient(0, 0, 0, H);
+                g.addColorStop(0, "hsl(255,55%,6%)");
+                g.addColorStop(0.6, "hsl(275,60%,7%)");
+                g.addColorStop(1, "hsl(320,70%,9%)");
+                ctx.fillStyle = g;
+                ctx.fillRect(0, 0, W, H);
+
+                // きら粒
+                ctx.save();
+                ctx.globalAlpha = 0.16;
+                ctx.fillStyle = "rgba(255,220,170,1)";
+                const n = Math.floor((W * H) / 28000);
+                for (let i = 0; i < n; i++) {
+                    const x = (i * 97.7 + t * 50) % W;
+                    const y = (i * 163.4 + t * 30) % H;
+                    ctx.beginPath();
+                    ctx.arc(x, y, (i % 3) + 0.7, 0, TAU);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            function drawPochiBukuro() {
+                const x = player.x,
+                    y = player.y;
+                const w = player.w,
+                    h = player.h;
+
+                ctx.save();
+                ctx.translate(x, y);
+
+                // 影
+                ctx.globalAlpha = 0.35;
+                ctx.fillStyle = "rgba(0,0,0,1)";
+                roundRect(-w * 0.5 + 2, -h * 0.5 + 6, w, h, 14);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+
+                // 本体（紙）
+                const g = ctx.createLinearGradient(
+                    -w * 0.5,
+                    -h * 0.5,
+                    w * 0.5,
+                    h * 0.5,
+                );
+                g.addColorStop(0, "hsl(45,35%,92%)");
+                g.addColorStop(1, "hsl(40,30%,84%)");
+                ctx.fillStyle = g;
+                roundRect(-w * 0.5, -h * 0.5, w, h, 14);
+                ctx.fill();
+
+                // 縁
+                ctx.strokeStyle = "rgba(160,120,80,.55)";
+                ctx.lineWidth = 2;
+                roundRect(-w * 0.5, -h * 0.5, w, h, 14);
+                ctx.stroke();
+
+                // リボン
+                ctx.strokeStyle = "rgba(210,40,60,.9)";
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.moveTo(-w * 0.35, 0);
+                ctx.lineTo(w * 0.35, 0);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, -h * 0.32);
+                ctx.lineTo(0, h * 0.32);
+                ctx.stroke();
+
+                // 結び目
+                ctx.fillStyle = "rgba(210,40,60,.95)";
+                ctx.beginPath();
+                ctx.arc(0, 0, 8, 0, TAU);
+                ctx.fill();
+
+                // ラベルっぽい
+                ctx.fillStyle = "rgba(255,255,255,.75)";
+                roundRect(-w * 0.16, -h * 0.2, w * 0.32, h * 0.22, 8);
+                ctx.fill();
+
+                ctx.fillStyle = "rgba(40,20,20,.75)";
+                ctx.font = `800 ${Math.max(12, Math.floor(w * 0.12))}px "Noto Sans JP", system-ui`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("お年玉", 0, -h * 0.09);
+
+                ctx.restore();
+            }
+
+            function roundRect(x, y, w, h, r) {
+                const rr = Math.min(r, w / 2, h / 2);
+                ctx.beginPath();
+                ctx.moveTo(x + rr, y);
+                ctx.arcTo(x + w, y, x + w, y + h, rr);
+                ctx.arcTo(x + w, y + h, x, y + h, rr);
+                ctx.arcTo(x, y + h, x, y, rr);
+                ctx.arcTo(x, y, x + w, y, rr);
+                ctx.closePath();
+            }
+
+            function drawCoin(m) {
+                ctx.save();
+                ctx.translate(m.x, m.y);
+                const r = m.r;
+
+                // 影
+                ctx.globalAlpha = 0.35;
+                ctx.fillStyle = "rgba(0,0,0,1)";
+                ctx.beginPath();
+                ctx.ellipse(4, 6, r * 1.05, r * 0.72, 0, 0, TAU);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+
+                // 本体
+                const g = ctx.createRadialGradient(
+                    -r * 0.4,
+                    -r * 0.4,
+                    r * 0.2,
+                    0,
+                    0,
+                    r * 1.2,
+                );
+                g.addColorStop(0, "hsl(55,90%,72%)");
+                g.addColorStop(1, "hsl(45,90%,48%)");
+                ctx.fillStyle = g;
+                ctx.beginPath();
+                ctx.arc(0, 0, r, 0, TAU);
+                ctx.fill();
+
+                // 縁
+                ctx.strokeStyle = "rgba(120,80,30,.8)";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, r - 1, 0, TAU);
+                ctx.stroke();
+
+                // 数字
+                ctx.fillStyle = "rgba(70,40,15,.85)";
+                ctx.font = `900 ${Math.max(10, Math.floor(r * 0.95))}px system-ui`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(String(m.value), 0, 1);
+
+                ctx.restore();
+            }
+
+            function drawBill(m) {
+                ctx.save();
+                ctx.translate(m.x, m.y);
+                ctx.rotate(m.rot);
+
+                const w = m.w,
+                    h = m.h;
+
+                // 影
+                ctx.globalAlpha = 0.32;
+                ctx.fillStyle = "rgba(0,0,0,1)";
+                roundRect(-w * 0.5 + 4, -h * 0.5 + 6, w, h, 10);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+
+                // 紙色（値で色ちょい変え）
+                const hue =
+                    m.value === 10000 ? 125 : m.value === 5000 ? 150 : 165;
+                const g = ctx.createLinearGradient(
+                    -w * 0.5,
+                    -h * 0.5,
+                    w * 0.5,
+                    h * 0.5,
+                );
+                g.addColorStop(0, `hsl(${hue},45%,88%)`);
+                g.addColorStop(1, `hsl(${hue},40%,78%)`);
+                ctx.fillStyle = g;
+                roundRect(-w * 0.5, -h * 0.5, w, h, 10);
+                ctx.fill();
+
+                // 透かしっぽい帯
+                ctx.globalAlpha = 0.22;
+                ctx.fillStyle = "rgba(255,255,255,1)";
+                roundRect(-w * 0.46, -h * 0.12, w * 0.92, h * 0.24, 8);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+
+                // 枠
+                ctx.strokeStyle = "rgba(40,60,40,.45)";
+                ctx.lineWidth = 2;
+                roundRect(-w * 0.5, -h * 0.5, w, h, 10);
+                ctx.stroke();
+
+                // 右下の額面
+                ctx.fillStyle = "rgba(20,40,20,.78)";
+                ctx.font = `900 ${Math.max(14, Math.floor(h * 0.55))}px system-ui`;
+                ctx.textAlign = "right";
+                ctx.textBaseline = "bottom";
+                ctx.fillText(String(m.value), w * 0.44, h * 0.38);
+
+                // キラッ
+                const sh = 0.5 + 0.5 * Math.sin(m.sheen + t * 6);
+                ctx.globalAlpha = 0.18 + 0.18 * sh;
+                ctx.fillStyle = "rgba(255,255,255,1)";
+                ctx.beginPath();
+                ctx.moveTo(-w * 0.5 + w * 0.15, -h * 0.5);
+                ctx.lineTo(-w * 0.5 + w * 0.35, -h * 0.5);
+                ctx.lineTo(w * 0.5, h * 0.5 - h * 0.1);
+                ctx.lineTo(w * 0.5, h * 0.5 - h * 0.3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.globalAlpha = 1;
+
+                ctx.restore();
+            }
+
+            function drawFloatTexts(dt) {
+                for (let i = floatTexts.length - 1; i >= 0; i--) {
+                    const ft = floatTexts[i];
+                    ft.life -= dt;
+                    ft.y += ft.vy * dt;
+                    const maxLife = ft.glow ? 1.2 : 0.9;
+                    const a = clamp(ft.life / maxLife, 0, 1);
+                    const scale = ft.scale || 1;
+                    const bounce = 1 + Math.sin((1 - a) * Math.PI * 2) * 0.1;
+
+                    ctx.save();
+                    ctx.translate(ft.x, ft.y);
+                    ctx.scale(scale * bounce, scale * bounce);
+                    ctx.globalAlpha = a;
+
+                    // グロー効果（お札用）
+                    if (ft.glow) {
+                        ctx.shadowColor = '#FFD700';
+                        ctx.shadowBlur = 20;
+                        ctx.fillStyle = '#FFD700';
+                        ctx.font = "900 22px system-ui";
+                    } else {
+                        ctx.fillStyle = "rgba(255,255,255,.92)";
+                        ctx.font = "900 18px system-ui";
+                    }
+
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(ft.text, 0, 0);
+
+                    // お札用の追加グロー
+                    if (ft.glow) {
+                        ctx.shadowBlur = 0;
+                        ctx.fillStyle = '#FFF';
+                        ctx.fillText(ft.text, 0, 0);
+                    }
+
+                    ctx.restore();
+
+                    if (ft.life <= 0) floatTexts.splice(i, 1);
+                }
+            }
+
+            // パーティクル更新と描画
+            function updateAndDrawParticles(dt) {
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.life -= dt;
+                    if (p.life <= 0) {
+                        particles.splice(i, 1);
+                        continue;
+                    }
+
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.vy += 400 * dt; // 重力
+                    p.sparkle += 10 * dt;
+
+                    const a = p.life / p.maxLife;
+                    const sparkle = 0.5 + 0.5 * Math.sin(p.sparkle);
+
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.globalAlpha = a * (0.7 + 0.3 * sparkle);
+                    ctx.fillStyle = p.color;
+
+                    if (p.type === 'star') {
+                        // 星型パーティクル
+                        ctx.rotate(p.sparkle);
+                        const size = p.size * a;
+                        ctx.beginPath();
+                        for (let j = 0; j < 5; j++) {
+                            const angle = (j * TAU / 5) - Math.PI / 2;
+                            const r = j % 2 === 0 ? size : size * 0.4;
+                            if (j === 0) ctx.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
+                            else ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                    } else {
+                        // 円形パーティクル
+                        ctx.beginPath();
+                        ctx.arc(0, 0, p.size * a, 0, TAU);
+                        ctx.fill();
+                    }
+
+                    ctx.restore();
+                }
+            }
+
+            // 紙吹雪の更新と描画
+            function updateAndDrawConfetti(dt) {
+                for (let i = confetti.length - 1; i >= 0; i--) {
+                    const c = confetti[i];
+                    c.life -= dt;
+                    if (c.life <= 0) {
+                        confetti.splice(i, 1);
+                        continue;
+                    }
+
+                    c.x += c.vx * dt;
+                    c.y += c.vy * dt;
+                    c.rot += c.rotV * dt;
+                    c.vx *= 0.99;
+                    c.vy += 50 * dt; // 軽い重力
+
+                    // 揺れ
+                    c.x += Math.sin(c.rot * 2) * 30 * dt;
+
+                    const a = Math.min(1, c.life);
+
+                    ctx.save();
+                    ctx.translate(c.x, c.y);
+                    ctx.rotate(c.rot);
+                    ctx.globalAlpha = a * 0.9;
+                    ctx.fillStyle = c.color;
+
+                    if (c.type === 'rect') {
+                        ctx.fillRect(-c.size / 2, -c.size / 4, c.size, c.size / 2);
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(0, 0, c.size / 2, 0, TAU);
+                        ctx.fill();
+                    }
+
+                    ctx.restore();
+                }
+            }
+
+            function update(dt) {
+                if (state !== "playing") return;
+
+                t += dt;
+                timeLeft -= dt;
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                    updateHUD();
+                    endGame();
+                    return;
+                }
+
+                // スポーン間隔（だんだん増える）
+                const minInterval = 0.08;
+                const maxInterval = 0.2;
+                const k = clamp(t / timeLimit, 0, 1);
+                const interval =
+                    maxInterval - (maxInterval - minInterval) * k;
+
+                spawnAcc += dt;
+                while (spawnAcc >= interval) {
+                    spawnAcc -= interval;
+                    spawnMoney();
+                    if (chance(0.25)) spawnMoney(); // たまにドサッと
+                }
+
+                // 入力で移動
+                let dir = 0;
+                if (keys.left) dir -= 1;
+                if (keys.right) dir += 1;
+
+                if (player.targetX !== null) {
+                    // 指やマウスで狙い位置へ
+                    const dx = player.targetX - player.x;
+                    player.vx = dx * 12;
+                } else {
+                    // キー
+                    player.vx = dir * player.speed;
+                }
+
+                player.x += player.vx * dt;
+                player.x = clamp(
+                    player.x,
+                    player.w * 0.5,
+                    W - player.w * 0.5,
+                );
+
+                // 衝突
+                const px = player.x,
+                    py = player.y,
+                    pw = player.w,
+                    ph = player.h;
+
+                for (let i = monies.length - 1; i >= 0; i--) {
+                    const m = monies[i];
+
+                    if (m.kind === "coin") {
+                        m.a += m.spin * dt;
+                        m.x += (m.vx + Math.sin(m.a) * m.wob) * dt;
+                        m.y += m.vy * dt;
+                        // 画面端ゆる反射
+                        if (m.x < 20 || m.x > W - 20) m.vx *= -0.8;
+
+                        const mw = m.r * 2,
+                            mh = m.r * 2;
+                        const hit = rectHit(
+                            m.x,
+                            m.y,
+                            mw,
+                            mh,
+                            px,
+                            py,
+                            pw * 0.92,
+                            ph * 0.55,
+                        );
+                        if (hit) {
+                            score += m.value;
+                            addFloatText(m.x, m.y - 10, `+${m.value}円`, m.value);
+                            spawnParticles(m.x, m.y, m.value);
+                            triggerHitStop(m.value);
+                            beep(720 + Math.min(600, m.value), 0.05, 0.05);
+                            monies.splice(i, 1);
+                            continue;
+                        }
+                        if (m.y > H + 80) monies.splice(i, 1);
+                    } else {
+                        m.rot += m.rotV * dt * 0.6;
+                        m.x += m.vx * dt;
+                        m.y += m.vy * dt;
+                        if (m.x < 30 || m.x > W - 30) m.vx *= -0.75;
+
+                        const hit = rectHit(
+                            m.x,
+                            m.y,
+                            m.w,
+                            m.h,
+                            px,
+                            py,
+                            pw * 0.94,
+                            ph * 0.6,
+                        );
+                        if (hit) {
+                            score += m.value;
+                            addFloatText(
+                                m.x,
+                                m.y - 10,
+                                `+${m.value.toLocaleString()}円`,
+                                m.value
+                            );
+                            spawnParticles(m.x, m.y, m.value);
+                            triggerHitStop(m.value);
+                            beep(
+                                m.value === 10000
+                                    ? 980
+                                    : m.value === 5000
+                                        ? 860
+                                        : 800,
+                                0.07,
+                                0.06,
+                            );
+                            monies.splice(i, 1);
+                            continue;
+                        }
+                        if (m.y > H + 120) monies.splice(i, 1);
+                    }
+                }
+
+                updateHUD();
+            }
+
+            function render(dt) {
+                drawBackground();
+
+                // 紙吹雪（背景側）
+                updateAndDrawConfetti(dt);
+
+                // お金
+                for (const m of monies) {
+                    if (m.kind === "coin") drawCoin(m);
+                    else drawBill(m);
+                }
+
+                // パーティクル
+                updateAndDrawParticles(dt);
+
+                // ポチ袋
+                drawPochiBukuro();
+
+                // 浮きテキスト
+                drawFloatTexts(dt);
+
+                // 足元ガイド（うっすら）
+                ctx.save();
+                ctx.globalAlpha = 0.18;
+                ctx.strokeStyle = "rgba(255,255,255,1)";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, player.y + player.h * 0.6);
+                ctx.lineTo(W, player.y + player.h * 0.6);
+                ctx.stroke();
+                ctx.restore();
+
+                // プレイ中の操作案内（最初の数秒だけ）
+                if (state === "playing" && t < 3.2) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.75;
+                    ctx.fillStyle = "rgba(255,255,255,1)";
+                    ctx.font = "800 14px system-ui";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(
+                        "←→ / A・D / ドラッグでポチ袋を左右に",
+                        W * 0.5,
+                        player.y - player.h * 0.95,
+                    );
+                    ctx.restore();
+                }
+
+                // ヒットストップ中のエフェクト（画面が白くフラッシュ）
+                if (hitStopTime > 0) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.15;
+                    ctx.fillStyle = '#FFF';
+                    ctx.fillRect(0, 0, W, H);
+                    ctx.restore();
+                }
+            }
+
+            function loop(ts) {
+                let dt = Math.min(0.033, (ts - lastTs) / 1000);
+                lastTs = ts;
+
+                // ヒットストップ処理
+                if (hitStopTime > 0) {
+                    hitStopTime -= dt;
+                    timeScale = 0.1; // スローモーション
+                } else {
+                    timeScale = 1;
+                }
+
+                // ゲームの更新はタイムスケールを適用
+                const gameDt = dt * timeScale;
+
+                update(gameDt);
+                render(dt); // レンダリングは常に通常速度
+
+                requestAnimationFrame(loop);
+            }
+
+            // イベント
+            window.addEventListener("resize", resize);
+
+            window.addEventListener("keydown", (e) => {
+                if (e.code === "ArrowLeft" || e.code === "KeyA")
+                    keys.left = true;
+                if (e.code === "ArrowRight" || e.code === "KeyD")
+                    keys.right = true;
+
+                // スペースで開始/リトライ
+                if (e.code === "Space") {
+                    if (state === "title") startGame();
+                    else if (state === "ended") {
+                        startBtn.style.display = "";
+                        retryBtn.style.display = "none";
+                        startGame();
+                    }
+                }
+            });
+            window.addEventListener("keyup", (e) => {
+                if (e.code === "ArrowLeft" || e.code === "KeyA")
+                    keys.left = false;
+                if (e.code === "ArrowRight" || e.code === "KeyD")
+                    keys.right = false;
+            });
+
+            // マウス/タッチで狙い位置
+            function setTargetFromEvent(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left) * (W / rect.width);
+                player.targetX = x;
+            }
+            canvas.addEventListener("pointerdown", (e) => {
+                canvas.setPointerCapture(e.pointerId);
+                setTargetFromEvent(e);
+                // iOSなどの音の解放
+                if (sfxToggle.checked && !audioCtx) {
+                    audioCtx = new (window.AudioContext ||
+                        window.webkitAudioContext)();
+                }
+                if (state === "title") startGame();
+            });
+            canvas.addEventListener("pointermove", (e) => {
+                if (player.targetX !== null) setTargetFromEvent(e);
+            });
+            canvas.addEventListener("pointerup", () => {
+                player.targetX = null;
+            });
+            canvas.addEventListener("pointercancel", () => {
+                player.targetX = null;
+            });
+
+            startBtn.addEventListener("click", () => {
+                if (sfxToggle.checked && !audioCtx) {
+                    audioCtx = new (window.AudioContext ||
+                        window.webkitAudioContext)();
+                }
+                startGame();
+            });
+            retryBtn.addEventListener("click", () => {
+                startBtn.style.display = "";
+                retryBtn.style.display = "none";
+                startGame();
+            });
+
+            // 初期化
+            best =
+                parseInt(
+                    localStorage.getItem("otoshidama_best") || "0",
+                    10,
+                ) || 0;
+            bestPill.textContent = `ベスト：${best.toLocaleString()}円`;
+            timePill.textContent = `残り：${parseInt(limitSel.value, 10).toFixed(1)}秒`;
+
+            resize();
+            resetGame();
+            centerUI.style.display = "grid";
+            requestAnimationFrame(loop);
+        })();
+    </script>
+</body>
+
+</html>
