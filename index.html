@@ -748,8 +748,26 @@
                 setTimeout(() => {
                     const newBestText = isNewBest ? '<span style="color:#FFD700;text-shadow:0 0 10px #FFD700">🎉 NEW BEST!</span><br>' : '';
                     const comboText = maxCombo >= 5 ? `<br>最大コンボ：<b style="color:#4ECDC4">${maxCombo}</b>` : '';
+                    
+                    // 金額に応じた励ましメッセージ
+                    let wishMessage = '';
+                    if (score >= 100000) {
+                        wishMessage = '💎 こんなお年玉もらえたら一生忘れない！';
+                    } else if (score >= 50000) {
+                        wishMessage = '🎊 こんなお年玉もらえたら最高の新年！';
+                    } else if (score >= 30000) {
+                        wishMessage = '✨ こんなお年玉もらえたらすごく嬉しい！';
+                    } else if (score >= 10000) {
+                        wishMessage = '🧧 こんなお年玉もらえたらいいね！';
+                    } else if (score >= 5000) {
+                        wishMessage = '🎁 もうちょっと欲しいかも…？';
+                    } else {
+                        wishMessage = '💪 まだまだこれから！';
+                    }
+                    const wishText = `<br><span style="font-size:0.9em;color:rgba(255,255,255,0.8);margin-top:4px;display:inline-block">${wishMessage}</span>`;
+                    
                     titleEl.innerHTML = isNewBest ? '🏆 新記録達成！ 🏆' : '✨ タイムアップ！ ✨';
-                    descEl.innerHTML = `${newBestText}結果：<b style="font-size:1.3em;color:#FFD700">${score.toLocaleString()}円</b><br>ベスト：<b>${best.toLocaleString()}円</b>${comboText}`;
+                    descEl.innerHTML = `${newBestText}結果：<b style="font-size:1.3em;color:#FFD700">${score.toLocaleString()}円</b><br>ベスト：<b>${best.toLocaleString()}円</b>${comboText}${wishText}`;
                     startBtn.style.display = "none";
                     retryBtn.style.display = "";
                     shareBtn.style.display = "";
