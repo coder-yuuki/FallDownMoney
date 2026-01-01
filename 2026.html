@@ -178,15 +178,74 @@
         #retryBtn:hover {
             background: linear-gradient(135deg, #FFEC8B 0%, #FFD700 100%);
         }
+
+        /* タイマーバー */
+        #timerBarContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 15;
+        }
+
+        #timerBar {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #FF6B6B, #FFD700, #4ECDC4);
+            transition: width 0.1s linear;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        #timerBar.warning {
+            background: linear-gradient(90deg, #FF6B6B, #FF4757);
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        /* Xシェアボタン */
+        #shareBtn {
+            background: #000;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #shareBtn:hover {
+            background: #1a1a1a;
+        }
+
+        #shareBtn svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
     </style>
 </head>
 
 <body>
     <div id="wrap"><canvas id="c"></canvas></div>
 
+    <div id="timerBarContainer" style="display: none;">
+        <div id="timerBar"></div>
+    </div>
+
     <div id="hud">
         <div class="pill" id="scorePill">所持金：0円</div>
-        <div class="pill" id="timePill">残り：30.0秒</div>
         <div class="pill" id="bestPill">ベスト：0円</div>
     </div>
 
@@ -198,14 +257,16 @@
                 / A・D / 指でドラッグ。
             </p>
             <div id="row">
-                <select id="limitSel" title="制限時間">
-                    <option value="20">20秒</option>
-                    <option value="30" selected>30秒</option>
-                    <option value="45">45秒</option>
-                </select>
                 <button id="startBtn">スタート</button>
                 <button id="retryBtn" style="display: none">
                     もう一回
+                </button>
+                <button id="shareBtn" style="display: none">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                    Xでシェア
                 </button>
                 <label title="効果音">
                     <input id="sfx" type="checkbox" checked />
@@ -221,12 +282,13 @@
             const ctx = canvas.getContext("2d", { alpha: false });
 
             const scorePill = document.getElementById("scorePill");
-            const timePill = document.getElementById("timePill");
             const bestPill = document.getElementById("bestPill");
+            const timerBarContainer = document.getElementById("timerBarContainer");
+            const timerBar = document.getElementById("timerBar");
 
-            const limitSel = document.getElementById("limitSel");
             const startBtn = document.getElementById("startBtn");
             const retryBtn = document.getElementById("retryBtn");
+            const shareBtn = document.getElementById("shareBtn");
             const sfxToggle = document.getElementById("sfx");
             const titleEl = document.getElementById("title");
             const descEl = document.getElementById("desc");
@@ -241,8 +303,8 @@
 
             // ゲーム状態
             let state = "title"; // title | playing | ended
-            let timeLimit = 30;
-            let timeLeft = 30;
+            const timeLimit = 20; // 20秒固定
+            let timeLeft = 20;
             let score = 0;
             let best = 0;
 
@@ -493,7 +555,6 @@
                 isNewBest = false;
                 hitStopTime = 0;
                 timeScale = 1;
-                timeLimit = parseInt(limitSel.value, 10);
                 timeLeft = timeLimit;
                 t = 0;
                 spawnAcc = 0;
@@ -508,6 +569,7 @@
                 resetGame();
                 state = "playing";
                 centerUI.style.display = "none";
+                timerBarContainer.style.display = "block";
                 beep(660, 0.07, 0.06);
             }
 
@@ -517,6 +579,7 @@
                 best = Math.max(best, score);
                 localStorage.setItem("otoshidama_best", String(best));
                 updateHUD();
+                timerBarContainer.style.display = "none";
 
                 // リザルト演出開始
                 resultAnimTime = 0;
@@ -529,9 +592,10 @@
                 setTimeout(() => {
                     const newBestText = isNewBest ? '<span style="color:#FFD700;text-shadow:0 0 10px #FFD700">🎉 NEW BEST!</span><br>' : '';
                     titleEl.innerHTML = isNewBest ? '🏆 新記録達成！ 🏆' : '✨ タイムアップ！ ✨';
-                    descEl.innerHTML = `${newBestText}結果：<b style="font-size:1.3em;color:#FFD700">${score.toLocaleString()}円</b><br>ベスト：<b>${best.toLocaleString()}円</b><br><br>もう一回チャレンジ？`;
+                    descEl.innerHTML = `${newBestText}結果：<b style="font-size:1.3em;color:#FFD700">${score.toLocaleString()}円</b><br>ベスト：<b>${best.toLocaleString()}円</b>`;
                     startBtn.style.display = "none";
                     retryBtn.style.display = "";
+                    shareBtn.style.display = "";
                     centerUI.style.display = "grid";
                     panel.style.animation = "panelAppear 0.5s ease-out";
                 }, 800);
@@ -545,8 +609,18 @@
 
             function updateHUD() {
                 scorePill.textContent = `所持金：${score.toLocaleString()}円`;
-                timePill.textContent = `残り：${Math.max(0, timeLeft).toFixed(1)}秒`;
                 bestPill.textContent = `ベスト：${best.toLocaleString()}円`;
+
+                // タイマーバー更新
+                const progress = Math.max(0, timeLeft / timeLimit) * 100;
+                timerBar.style.width = progress + '%';
+
+                // 残り5秒以下で警告色
+                if (timeLeft <= 5 && timeLeft > 0) {
+                    timerBar.classList.add('warning');
+                } else {
+                    timerBar.classList.remove('warning');
+                }
             }
 
             function drawBackground() {
@@ -1157,7 +1231,61 @@
             retryBtn.addEventListener("click", () => {
                 startBtn.style.display = "";
                 retryBtn.style.display = "none";
+                shareBtn.style.display = "none";
                 startGame();
+            });
+
+            // Xシェア機能
+            shareBtn.addEventListener("click", async () => {
+                // スクリーンショットを撮影してシェア
+                try {
+                    // canvas2blobでスクリーンショット
+                    const dataUrl = canvas.toDataURL('image/png');
+
+                    // シェアテキスト
+                    const shareText = `🎍お年玉キャッチで${score.toLocaleString()}円ゲット！🎍\n${isNewBest ? '🏆新記録達成！' : ''}\n\n#FallDownMoney`;
+
+                    // Web Share APIが使える場合（モバイル）
+                    if (navigator.share && navigator.canShare) {
+                        // blobに変換
+                        const response = await fetch(dataUrl);
+                        const blob = await response.blob();
+                        const file = new File([blob], 'otoshidama-score.png', { type: 'image/png' });
+
+                        const shareData = {
+                            text: shareText,
+                            files: [file]
+                        };
+
+                        if (navigator.canShare(shareData)) {
+                            await navigator.share(shareData);
+                            return;
+                        }
+                    }
+
+                    // Web Share APIが使えない場合はXの投稿画面を開く
+                    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+                    window.open(tweetUrl, '_blank');
+
+                    // クリップボードに画像をコピー（対応ブラウザのみ）
+                    try {
+                        const response = await fetch(dataUrl);
+                        const blob = await response.blob();
+                        await navigator.clipboard.write([
+                            new ClipboardItem({ 'image/png': blob })
+                        ]);
+                        alert('スクリーンショットをクリップボードにコピーしました！\nX投稿時に貼り付けてください。');
+                    } catch (e) {
+                        // クリップボードへのコピーに失敗しても続行
+                        console.log('Clipboard copy not supported');
+                    }
+                } catch (e) {
+                    console.error('Share failed:', e);
+                    // フォールバック: Xの投稿画面を開く
+                    const shareText = `🎍お年玉キャッチで${score.toLocaleString()}円ゲット！🎍\n${isNewBest ? '🏆新記録達成！' : ''}\n\n#FallDownMoney`;
+                    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+                    window.open(tweetUrl, '_blank');
+                }
             });
 
             // 初期化
@@ -1167,7 +1295,6 @@
                     10,
                 ) || 0;
             bestPill.textContent = `ベスト：${best.toLocaleString()}円`;
-            timePill.textContent = `残り：${parseInt(limitSel.value, 10).toFixed(1)}秒`;
 
             resize();
             resetGame();
