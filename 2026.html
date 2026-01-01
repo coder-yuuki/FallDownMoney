@@ -1236,56 +1236,13 @@
             });
 
             // Xシェア機能
-            shareBtn.addEventListener("click", async () => {
-                // スクリーンショットを撮影してシェア
-                try {
-                    // canvas2blobでスクリーンショット
-                    const dataUrl = canvas.toDataURL('image/png');
+            shareBtn.addEventListener("click", () => {
+                // シェアテキスト（ハッシュタグ入り）
+                const shareText = `🎍お年玉キャッチで${score.toLocaleString()}円ゲット！🎍${isNewBest ? '\n🏆新記録達成！' : ''}\n\n#FallDownMoney #お年玉キャッチ`;
 
-                    // シェアテキスト
-                    const shareText = `🎍お年玉キャッチで${score.toLocaleString()}円ゲット！🎍\n${isNewBest ? '🏆新記録達成！' : ''}\n\n#FallDownMoney`;
-
-                    // Web Share APIが使える場合（モバイル）
-                    if (navigator.share && navigator.canShare) {
-                        // blobに変換
-                        const response = await fetch(dataUrl);
-                        const blob = await response.blob();
-                        const file = new File([blob], 'otoshidama-score.png', { type: 'image/png' });
-
-                        const shareData = {
-                            text: shareText,
-                            files: [file]
-                        };
-
-                        if (navigator.canShare(shareData)) {
-                            await navigator.share(shareData);
-                            return;
-                        }
-                    }
-
-                    // Web Share APIが使えない場合はXの投稿画面を開く
-                    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-                    window.open(tweetUrl, '_blank');
-
-                    // クリップボードに画像をコピー（対応ブラウザのみ）
-                    try {
-                        const response = await fetch(dataUrl);
-                        const blob = await response.blob();
-                        await navigator.clipboard.write([
-                            new ClipboardItem({ 'image/png': blob })
-                        ]);
-                        alert('スクリーンショットをクリップボードにコピーしました！\nX投稿時に貼り付けてください。');
-                    } catch (e) {
-                        // クリップボードへのコピーに失敗しても続行
-                        console.log('Clipboard copy not supported');
-                    }
-                } catch (e) {
-                    console.error('Share failed:', e);
-                    // フォールバック: Xの投稿画面を開く
-                    const shareText = `🎍お年玉キャッチで${score.toLocaleString()}円ゲット！🎍\n${isNewBest ? '🏆新記録達成！' : ''}\n\n#FallDownMoney`;
-                    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-                    window.open(tweetUrl, '_blank');
-                }
+                // Xのポスト画面を開く
+                const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+                window.open(tweetUrl, '_blank');
             });
 
             // 初期化
